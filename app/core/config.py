@@ -1,0 +1,58 @@
+import tomllib
+from pathlib import Path
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from ..shared.utils.enums import ENV
+
+
+def get_project_version() -> str:
+    pyproject_path = Path("pyproject.toml")
+    with pyproject_path.open("rb") as f:
+        pyproject = tomllib.load(f)
+    return pyproject["project"]["version"]
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".env", env_file_encoding="utf-8", extra="ignore"
+    )
+
+    PROJECT_TITLE: str = "Support Hub API"
+    PROJECT_DESCRIPTION: str = "Support Hub API"
+    DOCS_URL: str = "/api/docs"
+    REDOC_URL: str = "/api/redoc"
+    OPENAPI_URL: str = "/api/openapi.json"
+    API_PREFIX: str = "/api/v1"
+
+    ENV: str = "dev"
+    DATABASE_URL: str = ""
+    REDIS_URL: str = ""
+    SECRET_KEY: str = ""
+    CREDENTIALS_ENCRYPTION_KEY: str = ""
+    ALGORITHM: str = ""
+    ACCESS_TOKEN_EXPIRE: int = 0
+    REFRESH_TOKEN_EXPIRE: int = 10080
+    ADMIN_BASE_URL: str = ""
+    MAIL_HOST: str = ""
+    MAIL_PORT: int = 0
+    MAIL_SECURE: bool = True
+    MAIL_USER: str = ""
+    MAIL_PASS: str = ""
+    MAIL_FROM: str = "a@a.com"
+
+    @property
+    def cors_origins(self) -> list[str]:
+        if self.ENV == ENV.PRODUCTION:
+            return [
+                "http://localhost:8080",
+                "http://localhost:8081",
+            ]
+
+        return [
+            "http://localhost:8080",
+            "http://localhost:8081",
+        ]
+
+
+settings = Settings()
