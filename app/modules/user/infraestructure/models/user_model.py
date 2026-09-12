@@ -29,7 +29,9 @@ class User(Base):
     password: Mapped[str] = mapped_column(String, nullable=False)
     phone: Mapped[str] = mapped_column(String, nullable=False)
     password_recovery: Mapped[str | None] = mapped_column(String, nullable=True)
-    password_recovery_expire: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    password_recovery_expire: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     single_session: Mapped[bool | None] = mapped_column(Boolean, default=True)
     is_admin: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)

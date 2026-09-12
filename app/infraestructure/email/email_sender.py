@@ -1,12 +1,12 @@
 from fastapi_mail import ConnectionConfig, FastMail, MessageSchema, MessageType
 from jinja2 import Template
-from pydantic import EmailStr
+from pydantic import EmailStr, SecretStr
 
 from app.core.config import settings
 
 conf = ConnectionConfig(
     MAIL_USERNAME=settings.MAIL_USER,
-    MAIL_PASSWORD=settings.MAIL_PASS,
+    MAIL_PASSWORD=SecretStr(settings.MAIL_PASS),
     MAIL_FROM=settings.MAIL_FROM,
     MAIL_SERVER=settings.MAIL_HOST,
     MAIL_PORT=settings.MAIL_PORT,

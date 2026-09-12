@@ -7,8 +7,8 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
 from app.core.config import settings
-from app.dependencies.limiter import limiter, rate_limit_exceeded_handler
-from app.middlewares.timing_middleware import add_timing_middleware
+from app.presentation.middlewares.rate_limit_middleware import limiter, rate_limit_exceeded_handler
+from app.presentation.middlewares.timing_middleware import add_timing_middleware
 
 timing_logger = logging.getLogger("timing")
 

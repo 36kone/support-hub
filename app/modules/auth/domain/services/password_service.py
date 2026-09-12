@@ -5,6 +5,8 @@ from uuid import UUID
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
+from app.infraestructure.email.email_sender import EmailSender
 from app.modules.auth.presentation.schemas.auth_schema import (
     ChangePasswordRequest,
     PasswordResetConfirm,
@@ -16,10 +18,11 @@ from app.shared.utils.security import get_password_hash, verify_password
 
 
 class PasswordService:
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(self, session: AsyncSession, email_sender: EmailSender | None = None) -> None:
         self.session = session
         self.users = UserService(session)
         self.sessions = UserSessionService(session)
+        self.email_sender = email_sender or EmailSender()
 
     async def change(self, data: ChangePasswordRequest, user_id: UUID) -> dict[str, str]:
         user = await self.users.get_by_id(user_id)
@@ -37,7 +40,16 @@ class PasswordService:
         user.password_recovery = secrets.token_urlsafe(32)
         user.password_recovery_expire = datetime.now(UTC) + timedelta(hours=1)
         await self.session.commit()
-        return {"message": "Password reset token created"}
+        await self.email_sender.send_email(
+            subject="Password reset",
+            email_to=data.email,
+            template_path="app/templates/password_reset.html",
+            context={
+                "username": user.name,
+                "reset_url": f"{settings.ADMIN_BASE_URL}/reset-password?token={user.password_recovery}",
+            },
+        )
+        return {"message": "Password reset email sent"}
 
     async def confirm_reset(self, data: PasswordResetConfirm) -> dict[str, str]:
         user = await self.users.get_by_password_reset_token(data.token)
