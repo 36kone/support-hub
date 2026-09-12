@@ -2,8 +2,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
-from sqlalchemy import TIMESTAMP, DateTime, ForeignKey, String, func
-from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+from sqlalchemy import TIMESTAMP, DateTime, ForeignKey, String, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.infraestructure.database.database import Base
@@ -17,23 +16,27 @@ class UserSession(Base):
     __table_args__ = {"schema": "auth"}  # noqa: RUF012
 
     id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True), primary_key=True, default=uuid4
+        Uuid(as_uuid=True), primary_key=True, default=uuid4
     )
     user_id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
+        Uuid(as_uuid=True),
         ForeignKey("auth.users.id", ondelete="CASCADE"),
         nullable=False,
     )
     revoked_by: Mapped[UUID | None] = mapped_column(
-        PG_UUID(as_uuid=True),
+        Uuid(as_uuid=True),
         ForeignKey("auth.users.id", ondelete="CASCADE"),
         nullable=True,
     )
-    expire_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now())
-    updated_at: Mapped[datetime | None] = mapped_column(TIMESTAMP, onupdate=func.now())
+    expire_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime | None] = mapped_column(
+        TIMESTAMP(timezone=True), onupdate=func.now()
+    )
     user_agent: Mapped[str | None] = mapped_column(String, nullable=True)
-    revoked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     ipv4: Mapped[str | None] = mapped_column(String, nullable=True)
     ipv6: Mapped[str | None] = mapped_column(String, nullable=True)
 

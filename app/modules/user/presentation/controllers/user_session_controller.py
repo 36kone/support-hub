@@ -1,76 +1,33 @@
-import logging
-from typing import Annotated
 from uuid import UUID
 
-from app.core.cbv import cbv
-from app.dependencies.authentication import (
-    auth_guard,
-    get_token_payload,
-    required_permissions,
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.infraestructure.database.database import get_db
+from app.modules.user.infraestructure.repositories.user_session_repository import (
+    UserSessionRepository,
 )
-from app.dependencies.current_user import CurrentUser
-from app.dependencies.service_provider import get_service
-from app.schemas import (
-    PaginatedResponse,
-    UserSessionResponse,
-    UserSessionSearchRequest,
-)
-from app.services.user.factory import build_user_session_service
-from app.services.user.user_session_service import UserSessionService
-from fastapi import APIRouter, Depends, HTTPException, Query
+from app.modules.user.presentation.schemas.user_session_schema import UserSessionResponse
+from app.shared.dependencies.authentication import bearer_scheme
+from app.shared.dependencies.current_user import CurrentUser
+from app.shared.utils.security import decode_access_token
 
-user_session_router = APIRouter(dependencies=[Depends(auth_guard)])
-logger = logging.getLogger(__name__)
+user_session_router = APIRouter()
 
 
-@cbv(user_session_router)
-class UserSessionController:
-    service: UserSessionService = Depends(get_service(build_user_session_service))
+@user_session_router.get("", response_model=list[UserSessionResponse])
+async def list_sessions(current_user: CurrentUser, session: AsyncSession = Depends(get_db)):
+    return await UserSessionRepository(session).list_by_user(current_user.id)
 
-    @user_session_router.put("/revoke-current-session", status_code=204)
-    @required_permissions()
-    async def revoke_current_user_session(
-        self,
-        payload: dict = Depends(get_token_payload),
-    ):
-        try:
-            session_id = payload.get("sid")
 
-            if not session_id:
-                raise HTTPException(
-                    status_code=401,
-                    detail="Could not validate credentials",
-                )
-
-            await self.service.revoke_session(UUID(session_id))
-        except Exception as e:
-            logger.exception(f"[REVOKE_CURRENT_USER_SESSION] -> {e}")
-            raise
-
-    @user_session_router.put("/revoke/{id_}", status_code=204)
-    @required_permissions()
-    async def revoke_user_session_by_id(
-        self,
-        id_: UUID,
-        current_user: CurrentUser,
-    ):
-        try:
-            self.service.get_by_id(id_)
-
-            await self.service.revoke_session(id_, current_user.id)
-        except Exception as e:
-            logger.exception(f"[REVOKE_USER_SESSION_BY_ID] -> {e}")
-            raise
-
-    @user_session_router.get(
-        "/", status_code=200, response_model=PaginatedResponse[UserSessionResponse]
-    )
-    @required_permissions()
-    async def search_sessions(
-        self, filters: Annotated[UserSessionSearchRequest, Query()]
-    ):
-        try:
-            return await self.service.search(filters)
-        except Exception as e:
-            logger.exception(f"[SEARCH_USER_SESSIONS] -> {e}")
-            raise
+@user_session_router.delete("/current", status_code=204)
+async def revoke_current_session(
+    current_user: CurrentUser,
+    credentials=Depends(bearer_scheme),
+    session: AsyncSession = Depends(get_db),
+) -> None:
+    payload = decode_access_token(credentials.credentials)
+    session_id = UUID(payload["sid"]) if payload else None
+    if session_id is None or not await UserSessionRepository(session).revoke(session_id, current_user.id):
+        raise HTTPException(status_code=401, detail="Session is no longer valid")
+    await session.commit()

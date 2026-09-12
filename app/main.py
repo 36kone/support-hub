@@ -1,13 +1,16 @@
-from app.api.v1.health.health_controller import health_router
-from app.api.v1.router import api_router
-from app.core.lifespan import lifespan
-from app.core.logging_config import setup_logging
-from app.core.middlewares_setup import configure_middlewares
 from fastapi import FastAPI
 
-from app.core.config import get_project_version, settings
+import sys
+from pathlib import Path
 
-setup_logging()
+# Allow both `uv run app/main.py` and `uv run python -m app.main`.
+if __package__ is None or __package__ == "":
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from app.api.v1.health.health_controller import health_router
+from app.api.v1.router import api_router
+from app.core.config import get_project_version, settings
+from app.infraestructure.lifespan.lifespan import lifespan
 
 app = FastAPI(
     lifespan=lifespan,
@@ -19,9 +22,8 @@ app = FastAPI(
     openapi_url=settings.OPENAPI_URL,
 )
 
-configure_middlewares(app)
-app.include_router(health_router)
 app.include_router(api_router, prefix=settings.API_PREFIX)
+app.include_router(health_router, prefix="/api/core")
 
 if __name__ == "__main__":
     import sys

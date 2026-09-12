@@ -1,5 +1,6 @@
 from collections.abc import AsyncGenerator
 
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
@@ -12,12 +13,7 @@ from app.core.config import settings
 engine = create_async_engine(
     settings.DATABASE_URL,
     echo=False,
-    pool_size=3,
-    max_overflow=2,
     pool_pre_ping=True,
-    pool_timeout=30,
-    pool_recycle=1800,
-    connect_args={"options": "-c timezone=utc"},
 )
 
 AsyncSessionLocal = async_sessionmaker(
@@ -39,3 +35,10 @@ async def get_db() -> AsyncGenerator[AsyncSession]:
         yield db
     finally:
         await db.close()
+
+
+async def create_database_schema() -> None:
+    async with engine.begin() as connection:
+        if connection.dialect.name == "postgresql":
+            await connection.execute(text("CREATE SCHEMA IF NOT EXISTS auth"))
+        await connection.run_sync(Base.metadata.create_all)

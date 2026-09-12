@@ -1,8 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from app.schemas import BaseSchema
-from pydantic import AliasPath, Field
+from app.shared.utils.base_schema import BaseSchema
 
 
 class CreateUserSession(BaseSchema):
@@ -26,10 +25,7 @@ class UserSessionSearchRequest(BaseSchema):
 
 class UserSessionResponse(BaseSchema):
     id: UUID
-    user: str | None = Field(default=None, validation_alias=AliasPath("user", "name"))
-    revoked_by: str | None = Field(
-        default=None, validation_alias=AliasPath("who_revoked", "name")
-    )
+    user_id: UUID
     expire_at: datetime | None = None
     user_agent: str | None = None
     user_device: str | None = None

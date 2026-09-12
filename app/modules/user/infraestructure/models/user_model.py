@@ -8,9 +8,9 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     String,
+    Uuid,
     func,
 )
-from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.infraestructure.database.database import Base
@@ -24,7 +24,7 @@ class User(Base):
     __table_args__ = {"schema": "auth"}  # noqa: RUF012
 
     id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True), primary_key=True, default=uuid4
+        Uuid(as_uuid=True), primary_key=True, default=uuid4
     )
     name: Mapped[str] = mapped_column(String, nullable=False)
     email: Mapped[str] = mapped_column(String, unique=True, nullable=False)
@@ -41,10 +41,10 @@ class User(Base):
     mfa_secret: Mapped[str | None] = mapped_column(String, nullable=True)
     online_at: Mapped[datetime | None] = mapped_column(TIMESTAMP, nullable=True)
     created_by: Mapped[UUID | None] = mapped_column(
-        PG_UUID(as_uuid=True), ForeignKey("auth.users.id"), nullable=True
+        Uuid(as_uuid=True), ForeignKey("auth.users.id"), nullable=True
     )
     updated_by: Mapped[UUID | None] = mapped_column(
-        PG_UUID(as_uuid=True), ForeignKey("auth.users.id"), nullable=True
+        Uuid(as_uuid=True), ForeignKey("auth.users.id"), nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now())
     updated_at: Mapped[datetime | None] = mapped_column(TIMESTAMP, onupdate=func.now())

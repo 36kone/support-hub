@@ -1,0 +1,1 @@
+"""Support Hub application package."""

@@ -1,26 +1,19 @@
 from datetime import datetime
 from uuid import UUID
 
-from app.schemas.base import BaseSchema
-from pydantic import AliasPath, EmailStr, Field, field_validator
+from pydantic import EmailStr
+
+from app.shared.utils.base_schema import BaseSchema
 
 
 class CreateUser(BaseSchema):
     name: str
     email: EmailStr
     password: str
-    phone: str
+    phone: str = ""
     single_session: bool | None = True
     mfa_enabled: bool | None = False
-    is_admin: bool = False
-
-    @field_validator("password", mode="after")
-    @classmethod
-    def validate_password(cls, password: str) -> str:
-        if len(password) < 5:
-            raise ValueError("Password must be at least 5 characters long")
-        return password
-
+    is_super_user: bool = False
 
 class UserSearchRequest(BaseSchema):
     keyword: str | None = None
@@ -39,12 +32,6 @@ class UserResponse(BaseSchema):
     single_session: bool
     created_at: datetime | None = None
     updated_at: datetime | None = None
-    created_by: str | None = Field(
-        default=None, validation_alias=AliasPath("who_created", "name")
-    )
-    updated_by: str | None = Field(
-        default=None, validation_alias=AliasPath("who_updated", "name")
-    )
 
 
 class UpdateCurrentUser(BaseSchema):
@@ -58,7 +45,7 @@ class UpdateUser(BaseSchema):
     email: str | None = None
     phone: str | None = None
     is_active: bool | None = None
-    is_admin: bool | None = None
+    is_super_user: bool | None = None
     mfa_enabled: bool | None = None
     single_session: bool | None = None
 
