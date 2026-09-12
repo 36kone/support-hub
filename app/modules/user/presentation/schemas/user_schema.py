@@ -15,6 +15,7 @@ class CreateUser(BaseSchema):
     mfa_enabled: bool | None = False
     is_super_user: bool = False
 
+
 class UserSearchRequest(BaseSchema):
     keyword: str | None = None
     size: int = 10

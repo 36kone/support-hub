@@ -15,9 +15,7 @@ class UserSession(Base):
     __tablename__ = "user_sessions"
     __table_args__ = {"schema": "auth"}  # noqa: RUF012
 
-    id: Mapped[UUID] = mapped_column(
-        Uuid(as_uuid=True), primary_key=True, default=uuid4
-    )
+    id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid4)
     user_id: Mapped[UUID] = mapped_column(
         Uuid(as_uuid=True),
         ForeignKey("auth.users.id", ondelete="CASCADE"),

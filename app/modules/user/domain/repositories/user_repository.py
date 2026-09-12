@@ -2,14 +2,14 @@ from collections.abc import Sequence
 from datetime import UTC, datetime
 from uuid import UUID
 
-from app.enums import CustomerStatusEnum
-from app.enums.user.user_enum import UserStatusEnum
-from app.models import Customer, Team, User, UserProfile
-from app.schemas import UserSearchRequest
 from sqlalchemy import ColumnElement, and_, or_, select
 from sqlalchemy.orm import joinedload, selectinload
 from sqlalchemy.orm.interfaces import ORMOption
 
+from app.enums import CustomerStatusEnum
+from app.enums.user.user_enum import UserStatusEnum
+from app.models import Customer, Team, User, UserProfile
+from app.schemas import UserSearchRequest
 from app.shared.domain.repositories.base_repository import BaseRepository
 
 
@@ -92,14 +92,10 @@ class UserRepository(BaseRepository[User]):
         )
 
         return self.session.scalar(
-            self._apply_options(
-                stmt, options if options is not None else _default_get_options()
-            )
+            self._apply_options(stmt, options if options is not None else _default_get_options())
         )
 
-    def get_simple(
-        self, id_: UUID, options: Sequence[ORMOption] | None = None
-    ) -> User | None:
+    def get_simple(self, id_: UUID, options: Sequence[ORMOption] | None = None) -> User | None:
         stmt = self._select(User.id == id_, include_deleted=True)
 
         return self.session.scalar(self._apply_options(stmt, options))

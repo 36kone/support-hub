@@ -36,9 +36,7 @@ def add_timing_middleware(
     metric_namer = _MetricNamer(prefix=prefix, app=app)
 
     @app.middleware("http")
-    async def timing_middleware(
-        request: Request, call_next: RequestResponseEndpoint
-    ) -> Response:
+    async def timing_middleware(request: Request, call_next: RequestResponseEndpoint) -> Response:
         metric_name = metric_namer(request.scope)
         with _TimingStats(metric_name, record=record, exclude=exclude) as timer:
             setattr(request.state, TIMER_ATTRIBUTE, timer)

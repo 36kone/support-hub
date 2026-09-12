@@ -14,9 +14,7 @@ def get_project_version() -> str:
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(
-        env_file=".env", env_file_encoding="utf-8", extra="ignore"
-    )
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     PROJECT_TITLE: str = "Support Hub API"
     PROJECT_DESCRIPTION: str = "Support Hub API"

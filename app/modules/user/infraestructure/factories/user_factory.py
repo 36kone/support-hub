@@ -1,12 +1,7 @@
-from app.services.logs.audit_log_service import AuditLogService
-from app.services.user.user_service import UserService
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.modules.user.domain.services.user_service import UserService
 
 
-def build_user_service(session: Session) -> UserService:
-    return UserService(
-        session=session,
-        repository=UserRepository(session),
-        user_session_service=build_user_session_service(session),
-        audit_log_service=AuditLogService(session),
-    )
+def build_user_service(session: AsyncSession) -> UserService:
+    return UserService(session)

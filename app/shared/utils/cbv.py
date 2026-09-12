@@ -68,9 +68,7 @@ def _rebind_routes(cls: type, router: APIRouter) -> None:
     for route in cbv_routes:
         router.routes.remove(route)
         _fix_endpoint_signature(cls, route.endpoint)
-        route.dependencies = [
-            d for d in route.dependencies if d not in router.dependencies
-        ]
+        route.dependencies = [d for d in route.dependencies if d not in router.dependencies]
         pending_router.routes.append(route)
 
     router.include_router(pending_router)
@@ -86,7 +84,6 @@ def _fix_endpoint_signature(cls: type, endpoint: Callable) -> None:
 
     self_parameter = old_parameters[0].replace(default=Depends(cls))
     new_parameters = [self_parameter] + [
-        parameter.replace(kind=inspect.Parameter.KEYWORD_ONLY)
-        for parameter in old_parameters[1:]
+        parameter.replace(kind=inspect.Parameter.KEYWORD_ONLY) for parameter in old_parameters[1:]
     ]
     endpoint.__signature__ = old_signature.replace(parameters=new_parameters)

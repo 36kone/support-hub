@@ -27,9 +27,7 @@ class BaseRepository[ModelT: Base]:
     def _columns(self) -> type[Model]:
         return cast(type[Model], self.model)
 
-    def _apply_options(
-        self, stmt: Select, options: Sequence[ORMOption] | None
-    ) -> Select:
+    def _apply_options(self, stmt: Select, options: Sequence[ORMOption] | None) -> Select:
         if options:
             stmt = stmt.options(*options)
         return stmt
@@ -55,9 +53,7 @@ class BaseRepository[ModelT: Base]:
         return select(self.model).where(*where)
 
     def _count(self, stmt: Select) -> int:
-        return (
-            self.session.scalar(select(func.count()).select_from(stmt.subquery())) or 0
-        )
+        return self.session.scalar(select(func.count()).select_from(stmt.subquery())) or 0
 
     def _paginate(self, stmt: Select, page: int, size: int) -> tuple[Select, int]:
         total = self._count(stmt.order_by(None))
@@ -83,9 +79,7 @@ class BaseRepository[ModelT: Base]:
 
         stmt = self._select(self._columns.id.in_(ids), include_deleted=include_deleted)
 
-        return list(
-            self.session.scalars(self._apply_options(stmt, options)).unique().all()
-        )
+        return list(self.session.scalars(self._apply_options(stmt, options)).unique().all())
 
     def find_one(
         self,
@@ -108,9 +102,7 @@ class BaseRepository[ModelT: Base]:
         if order_by:
             stmt = stmt.order_by(*order_by)
 
-        return list(
-            self.session.scalars(self._apply_options(stmt, options)).unique().all()
-        )
+        return list(self.session.scalars(self._apply_options(stmt, options)).unique().all())
 
     def exists(
         self,

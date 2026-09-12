@@ -1,77 +1,56 @@
 from uuid import UUID
 
 import pyotp
-from app.core.exception_utils import ensure_or_400, ensure_or_404
-from app.enums import TokenRole
-from app.repositories import UserRepository
-from app.schemas import Enable2FARequest, Token
-from app.services.auth.auth_token_service import AuthTokenService
-from fastapi import HTTPException, Request
-from sqlalchemy.orm import Session
+from fastapi import HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.modules.auth.domain.services.token_service import TokenService
+from app.modules.auth.presentation.schemas.auth_schema import Enable2FARequest, Token
+from app.modules.user.infraestructure.repositories.user_repository import UserRepository
 
 
 class MfaService:
-    def __init__(
-        self,
-        session: Session,
-        user_repository: UserRepository,
-        token_service: AuthTokenService,
-    ) -> None:
-        self._session = session
-        self._users = user_repository
-        self._tokens = token_service
+    def __init__(self, session: AsyncSession) -> None:
+        self.session = session
+        self.users = UserRepository(session)
+        self.tokens = TokenService(session)
 
-    def _get_user(self, user_id: UUID):
-        return ensure_or_404(
-            self._users.get(user_id, options=[]),
-            "User not found",
-        )
+    async def _get_user(self, user_id: UUID):
+        user = await self.users.get(user_id)
+        if user is None:
+            raise HTTPException(status_code=404, detail="User not found")
+        return user
 
-    def verify(self, code: str, request: Request, token: str) -> Token:
-        user_id = self._tokens.get_subject(token, TokenRole.MFA)
-        user = self._get_user(user_id)
+    async def verify(
+        self, code: str, token: str, ipv4: str | None, user_agent: str | None
+    ) -> Token:
+        user = await self._get_user(self.tokens.get_subject(token, "mfa"))
+        if not user.mfa_secret or not pyotp.TOTP(user.mfa_secret).verify(code):
+            raise HTTPException(status_code=400, detail="Invalid code")
+        return await self.tokens.issue_user_token(user, ipv4, user_agent)
 
-        if not user.mfa_secret:
-            raise HTTPException(400, "Missing MFA setup")
-
-        ensure_or_400(pyotp.TOTP(user.mfa_secret).verify(code), "Invalid code")
-
-        return self._tokens.issue_user_token(
-            user,
-            ipv4=request.client.host if request.client else None,
-            user_agent=request.headers.get("user-agent"),
-        )
-
-    def setup(self, user_id: UUID) -> tuple[str, str]:
-        user = self._get_user(user_id)
+    async def setup(self, user_id: UUID) -> tuple[str, str]:
+        user = await self._get_user(user_id)
         secret = pyotp.random_base32()
         user.mfa_secret = secret
-        self._users.add(user)
-        self._session.commit()
-
-        uri = pyotp.totp.TOTP(secret).provisioning_uri(
-            name=user.email,
-            issuer_name="Impacto",
+        await self.session.commit()
+        return secret, pyotp.TOTP(secret).provisioning_uri(
+            name=user.email, issuer_name="Support Hub"
         )
-        return secret, uri
 
-    def enable(self, payload: Enable2FARequest, user_id: UUID) -> dict:
-        user = self._get_user(user_id)
-        if not user.mfa_secret:
-            raise HTTPException(400, "Missing MFA setup")
-
-        ensure_or_400(pyotp.TOTP(user.mfa_secret).verify(payload.code), "Invalid code")
+    async def enable(self, payload: Enable2FARequest, user_id: UUID) -> dict[str, str]:
+        user = await self._get_user(user_id)
+        if not user.mfa_secret or not pyotp.TOTP(user.mfa_secret).verify(payload.code):
+            raise HTTPException(status_code=400, detail="Invalid code")
         user.mfa_enabled = True
-        self._users.add(user)
-        self._session.commit()
+        await self.session.commit()
         return {"message": "2FA activated"}
 
-    def disable(self, user_id: UUID) -> dict:
-        user = self._get_user(user_id)
-        ensure_or_400(user.mfa_enabled, "2FA already disabled")
-
+    async def disable(self, user_id: UUID) -> dict[str, str]:
+        user = await self._get_user(user_id)
+        if not user.mfa_enabled:
+            raise HTTPException(status_code=400, detail="2FA already disabled")
         user.mfa_enabled = False
         user.mfa_secret = None
-        self._users.add(user)
-        self._session.commit()
-        return {"message": "2fa disabled"}
+        await self.session.commit()
+        return {"message": "2FA disabled"}

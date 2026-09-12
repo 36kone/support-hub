@@ -26,6 +26,16 @@ class UserSessionRepository:
             )
         )
 
+    async def get(self, session_id: UUID) -> UserSession | None:
+        return await self.session.get(UserSession, session_id)
+
+    async def get_by_user_id(self, user_id: UUID) -> UserSession | None:
+        return await self.session.scalar(
+            select(UserSession)
+            .where(UserSession.user_id == user_id, UserSession.revoked_at.is_(None))
+            .order_by(UserSession.created_at.desc())
+        )
+
     async def list_by_user(self, user_id: UUID) -> list[UserSession]:
         return list(
             (

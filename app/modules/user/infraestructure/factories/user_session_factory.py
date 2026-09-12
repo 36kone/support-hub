@@ -1,9 +1,7 @@
-from app.services.user.user_session_service import UserSessionService
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.modules.user.domain.services.user_session_service import UserSessionService
 
 
-def build_user_session_service(session: Session) -> UserSessionService:
-    return UserSessionService(
-        session=session,
-        repository=UserSessionRepository(session),
-    )
+def build_user_session_service(session: AsyncSession) -> UserSessionService:
+    return UserSessionService(session)

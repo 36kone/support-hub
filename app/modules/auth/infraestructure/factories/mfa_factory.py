@@ -1,6 +1,7 @@
-def build_mfa_service(session: Session) -> MfaService:
-    return MfaService(
-        session=session,
-        user_repository=UserRepository(session),
-        token_service=_build_token_service(session),
-    )
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.modules.auth.domain.services.mfa_service import MfaService
+
+
+def build_mfa_service(session: AsyncSession) -> MfaService:
+    return MfaService(session)

@@ -1,7 +1,5 @@
 import logging
 
-from app.dependencies.limiter import limiter, rate_limit_exceeded_handler
-from app.middlewares.timing_middleware import add_timing_middleware
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
@@ -9,6 +7,8 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
 from app.core.config import settings
+from app.dependencies.limiter import limiter, rate_limit_exceeded_handler
+from app.middlewares.timing_middleware import add_timing_middleware
 
 timing_logger = logging.getLogger("timing")
 

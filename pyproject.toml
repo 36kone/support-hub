@@ -20,6 +20,7 @@ dependencies = [
     "pydantic>=2.13.5",
     "pydantic-settings>=2.15.0",
     "pyjwt>=2.13.0",
+    "pyotp>=2.9.0",
     "python-multipart>=0.0.32",
     "redis>=8.1.0",
     "slowapi>=0.1.10",
@@ -35,6 +36,7 @@ dev = [
     "pytest-html>=4.1.0",
     "pytest-timeout>=2.3.1",
     "pytest-xdist>=3.6.0",
+    "hatch",
     "ruff>=0.9.0",
     "pyright>=1.1.390",
     "testcontainers>=4.0.0",
@@ -68,3 +70,19 @@ known-first-party = ["app"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["S101"]
+
+[tool.hatch.envs.default]
+dependency-groups = ["dev"]
+
+[tool.hatch.envs.default.scripts]
+fmt = "ruff check --fix . && ruff format ."
+# test = "pytest -n 6 -vv -ra --tb=short --durations=20 --cov=app --cov-report=term-missing --html=pytest_report.html --self-contained-html --timeout=120"
+test = "pytest -n 6 -vv -x -ra --tb=short --timeout=120"
+
+pythonpath = ["."]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-ra"
+

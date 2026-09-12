@@ -32,4 +32,3 @@ def test_health_check_database_unavailable(
     body = response.json()
     assert body["databaseAlive"] is False
     assert body["message"] == "Database unavailable"
-

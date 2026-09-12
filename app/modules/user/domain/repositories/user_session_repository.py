@@ -2,12 +2,12 @@ from collections.abc import Sequence
 from datetime import UTC, datetime
 from uuid import UUID
 
-from app.models import User, UserSession, VersionControl
-from app.schemas import UserSessionSearchRequest
 from sqlalchemy import and_, or_, select, update
 from sqlalchemy.orm import selectinload
 from sqlalchemy.orm.interfaces import ORMOption
 
+from app.models import User, UserSession, VersionControl
+from app.schemas import UserSessionSearchRequest
 from app.shared.domain.repositories.base_repository import BaseRepository
 
 
@@ -130,9 +130,7 @@ class UserSessionRepository(BaseRepository[UserSession]):
     def revoke_by_user_id(self, user_id: UUID) -> list[UUID]:
         result = self.session.execute(
             update(UserSession)
-            .where(
-                and_(UserSession.user_id == user_id, UserSession.revoked_at.is_(None))
-            )
+            .where(and_(UserSession.user_id == user_id, UserSession.revoked_at.is_(None)))
             .values(revoked_at=datetime.now(UTC))
             .returning(UserSession.id)
         )

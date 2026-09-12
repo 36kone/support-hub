@@ -19,7 +19,7 @@ def test_login_returns_bearer_token(client):
 
     response = client.post(
         "/api/v1/auth/login",
-        json={"email": user.json()["email"], "password": "correct-horse-battery-staple"},
+        data={"username": user.json()["email"], "password": "correct-horse-battery-staple"},
     )
 
     assert response.status_code == 200
@@ -33,7 +33,7 @@ def test_login_rejects_invalid_password(client):
 
     response = client.post(
         "/api/v1/auth/login",
-        json={"email": user.json()["email"], "password": "incorrect"},
+        data={"username": user.json()["email"], "password": "incorrect"},
     )
 
     assert response.status_code == 401

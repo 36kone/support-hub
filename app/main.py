@@ -1,7 +1,7 @@
-from fastapi import FastAPI
-
 import sys
 from pathlib import Path
+
+from fastapi import FastAPI
 
 # Allow both `uv run app/main.py` and `uv run python -m app.main`.
 if __package__ is None or __package__ == "":

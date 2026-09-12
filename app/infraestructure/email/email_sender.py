@@ -21,9 +21,7 @@ class EmailSender:
     def __init__(self):
         self.mailer = FastMail(conf)
 
-    async def send_email(
-        self, subject: str, email_to: EmailStr, template_path: str, context: dict
-    ):
+    async def send_email(self, subject: str, email_to: EmailStr, template_path: str, context: dict):
         try:
             with open(template_path, encoding="utf-8") as file:
                 template = Template(file.read())

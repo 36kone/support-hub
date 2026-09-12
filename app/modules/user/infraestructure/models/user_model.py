@@ -23,17 +23,13 @@ class User(Base):
     __tablename__ = "users"
     __table_args__ = {"schema": "auth"}  # noqa: RUF012
 
-    id: Mapped[UUID] = mapped_column(
-        Uuid(as_uuid=True), primary_key=True, default=uuid4
-    )
+    id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid4)
     name: Mapped[str] = mapped_column(String, nullable=False)
     email: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     password: Mapped[str] = mapped_column(String, nullable=False)
     phone: Mapped[str] = mapped_column(String, nullable=False)
     password_recovery: Mapped[str | None] = mapped_column(String, nullable=True)
-    password_recovery_expire: Mapped[datetime | None] = mapped_column(
-        DateTime, nullable=True
-    )
+    password_recovery_expire: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     single_session: Mapped[bool | None] = mapped_column(Boolean, default=True)
     is_admin: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
@@ -49,9 +45,7 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now())
     updated_at: Mapped[datetime | None] = mapped_column(TIMESTAMP, onupdate=func.now())
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-    allow_virtual_agent: Mapped[bool] = mapped_column(
-        Boolean, default=False, nullable=False
-    )
+    allow_virtual_agent: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_super_user: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     sessions: Mapped[list[UserSession]] = relationship(

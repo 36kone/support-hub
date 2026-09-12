@@ -21,10 +21,22 @@ def verify_password(password: str, hashed_password: str) -> bool:
     return password_hash.verify(password, hashed_password)
 
 
-def create_access_token(subject: str, session_id: str) -> str:
-    expires_at = datetime.now(UTC) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE)
+def create_access_token(
+    subject: str,
+    session_id: str | None = None,
+    expires_delta: timedelta | None = None,
+    token_role: str | None = None,
+) -> str:
+    expires_at = datetime.now(UTC) + (
+        expires_delta or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE)
+    )
+    payload: dict[str, str | datetime] = {"sub": subject, "exp": expires_at}
+    if session_id is not None:
+        payload["sid"] = session_id
+    if token_role is not None:
+        payload["token_role"] = token_role
     return encode(
-        {"sub": subject, "sid": session_id, "exp": expires_at},
+        payload,
         settings.SECRET_KEY,
         algorithm=settings.ALGORITHM,
     )
@@ -52,9 +64,7 @@ def _key() -> bytes:
 def encrypt_credentials(value: dict) -> tuple[str, str]:
     nonce = os.urandom(12)
     encrypted = AESGCM(_key()).encrypt(nonce, _json_bytes(value), None)
-    return base64.urlsafe_b64encode(encrypted).decode(), base64.urlsafe_b64encode(
-        nonce
-    ).decode()
+    return base64.urlsafe_b64encode(encrypted).decode(), base64.urlsafe_b64encode(nonce).decode()
 
 
 def decrypt_credentials(encrypted: str, nonce: str) -> dict:

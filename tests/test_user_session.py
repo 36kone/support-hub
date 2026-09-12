@@ -13,7 +13,7 @@ def authenticated_headers(client):
     )
     token = client.post(
         "/api/v1/auth/login",
-        json={"email": email, "password": "correct-horse-battery-staple"},
+        data={"username": email, "password": "correct-horse-battery-staple"},
     ).json()["accessToken"]
     return {"Authorization": f"Bearer {token}"}
 

@@ -1,123 +1,96 @@
-import uuid
 from datetime import UTC, datetime, timedelta
-from uuid import UUID
+from uuid import UUID, uuid4
 
-from app.core.exception_utils import ensure_or_404
-from app.models import User, UserSession
-from app.redis.redis import redis_client
-from app.repositories import UserSessionRepository
-from app.schemas import (
-    PaginatedResponse,
-    UserSessionResponse,
-    UserSessionSearchRequest,
-    UserSessionUpdate,
-)
+import redis.asyncio as redis
 from fastapi import HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.modules.user.infraestructure.models.user_model import User
+from app.modules.user.infraestructure.models.user_session_model import UserSession
+from app.modules.user.infraestructure.repositories.user_session_repository import (
+    UserSessionRepository,
+)
+from app.modules.user.presentation.schemas.user_session_schema import (
+    UpdateUserSession,
+    UserSessionSearchRequest,
+)
 
 
 class UserSessionService:
-    def __init__(self, session: Session, repository: UserSessionRepository):
-        self._session = session
-        self._repository = repository
+    def __init__(self, session: AsyncSession) -> None:
+        self.session = session
+        self.sessions = UserSessionRepository(session)
+
+    async def list_by_user(self, user_id: UUID) -> list[UserSession]:
+        return await self.sessions.list_by_user(user_id)
 
     async def create_user_session(
         self,
         user: User,
         ipv4: str | None = None,
         user_agent: str | None = None,
-    ):
-        if user and user.single_session:
-            await self.revoke_user_sessions(user.id)
-
+    ) -> UserSession:
+        if user.single_session:
+            await self.sessions.revoke_all_for_user(user.id)
         user_session = UserSession(
-            id=uuid.uuid4(),
+            id=uuid4(),
             user_id=user.id,
-            expire_at=datetime.now(UTC)
-            + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE),
-            user_agent=user_agent,
+            expire_at=datetime.now(UTC) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE),
             ipv4=ipv4,
+            user_agent=user_agent,
         )
-
-        self._repository.add(user_session)
-        self._session.commit()
-
+        await self.sessions.create(user_session)
+        await self.session.commit()
         return user_session
 
-    def get_by_id(self, id_: UUID):
-        return ensure_or_404(
-            self._repository.get(id_),
-            "User session not found",
-        )
+    async def get_by_id(self, id_: UUID) -> UserSession:
+        user_session = await self.sessions.get(id_)
+        if user_session is None:
+            raise HTTPException(status_code=404, detail="User session not found")
+        return user_session
 
-    def get_push_token_by_user_id(self, user_id: UUID) -> str | None:
-        return self._repository.get_push_token_by_user_id(user_id)
+    async def get_push_token_by_user_id(self, user_id: UUID) -> str | None:
+        # Push tokens are not part of the current session model.
+        return None
 
-    def get_by_user_id(self, user_id: UUID):
-        return self._repository.get_by_user_id(user_id)
+    async def get_by_user_id(self, user_id: UUID) -> UserSession | None:
+        return await self.sessions.get_by_user_id(user_id)
 
-    async def search(
-        self, filters: UserSessionSearchRequest
-    ) -> PaginatedResponse[UserSessionResponse]:
-        items, total = self._repository.search(filters)
+    async def search(self, filters: UserSessionSearchRequest) -> list[UserSession]:
+        if filters.user_id is None:
+            return []
+        return await self.sessions.list_by_user(filters.user_id)
 
-        return PaginatedResponse.create(
-            total=total,
-            page=filters.page,
-            size=filters.size,
-            items=[
-                UserSessionResponse.model_validate(i, from_attributes=True)
-                for i in items
-            ],
-        )
+    async def update(self, data: UpdateUserSession) -> UserSession:
+        user_session = await self.get_by_id(data.id)
+        for field, value in data.model_dump(exclude_unset=True).items():
+            if field != "id" and hasattr(user_session, field):
+                setattr(user_session, field, value)
+        await self.session.commit()
+        await self.session.refresh(user_session)
+        return user_session
 
-    def update(self, data: UserSessionUpdate):
-        entity = self.get_by_id(data.id)
-
+    async def revoke(self, session_id: UUID, user_id: UUID) -> None:
+        if not await self.sessions.revoke(session_id, user_id):
+            raise HTTPException(status_code=401, detail="Session is no longer valid")
+        await self.session.commit()
+        cache = redis.from_url(settings.REDIS_URL, encoding="utf-8", decode_responses=True)
         try:
-            data_dict = data.model_dump(exclude_unset=True)
+            await cache.delete(f"auth:session:{session_id}:user:{user_id}")
+        finally:
+            await cache.aclose()
 
-            for field, value in data_dict.items():
-                setattr(entity, field, value)
-
-            self._session.commit()
-            return entity
-
-        except HTTPException as error:
-            self._session.rollback()
-            raise HTTPException(
-                status_code=400, detail=f"Update failed - {error}"
-            ) from error
-
-    async def revoke_session(
-        self, id_: UUID, current_user_id: UUID | None = None
-    ) -> None:
-        session = self._repository.get(id_)
-
-        self._repository.revoke(id_, current_user_id)
-        self._session.commit()
-
-        if session:
-            redis = await redis_client.get_client()
-            await redis.delete(f"auth:session:{id_}:user:{session.user_id}")
+    async def revoke_session(self, id_: UUID, current_user_id: UUID | None = None) -> None:
+        user_session = await self.get_by_id(id_)
+        if not await self.sessions.revoke(id_, user_session.user_id):
+            raise HTTPException(status_code=401, detail="Session is no longer valid")
+        await self.session.commit()
 
     async def invalidate_user_cache(self, user_id: UUID) -> None:
-        session_ids = self._repository.get_active_ids_by_user_id(user_id)
-
-        if session_ids:
-            redis = await redis_client.get_client()
-            await redis.delete(
-                *(f"auth:session:{sid}:user:{user_id}" for sid in session_ids)
-            )
+        # Session validation currently reads PostgreSQL directly; no cache to invalidate.
+        return None
 
     async def revoke_user_sessions(self, user_id: UUID) -> None:
-        revoked_ids = self._repository.revoke_by_user_id(user_id)
-        self._session.commit()
-
-        if revoked_ids:
-            redis = await redis_client.get_client()
-            await redis.delete(
-                *(f"auth:session:{sid}:user:{user_id}" for sid in revoked_ids)
-            )
+        await self.sessions.revoke_all_for_user(user_id)
+        await self.session.commit()

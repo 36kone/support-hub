@@ -373,7 +373,6 @@ Exemplo:
 
 ``` python
 class TicketService:
-
     def __init__(
         self,
         reader,
@@ -394,9 +393,7 @@ class TicketService:
 
         await self.writer.update(ticket)
 
-        await self.event_publisher.publish(
-            TicketClosed(ticket.id)
-        )
+        await self.event_publisher.publish(TicketClosed(ticket.id))
 
         return ticket
 ```
@@ -482,39 +479,28 @@ Por exemplo:
 
 ``` python
 class TicketReader:
+    async def get_by_id(self, ticket_id): ...
 
-    async def get_by_id(self, ticket_id):
-        ...
+    async def get_by_user(self, user_id): ...
 
-    async def get_by_user(self, user_id):
-        ...
+    async def search(self, filters): ...
 
-    async def search(self, filters):
-        ...
-
-    async def list(self, pagination):
-        ...
+    async def list(self, pagination): ...
 ```
 
 Da mesma forma, operações de escrita podem ser agrupadas em um Writer:
 
 ``` python
 class TicketWriter:
+    async def create(self, ticket): ...
 
-    async def create(self, ticket):
-        ...
+    async def update(self, ticket): ...
 
-    async def update(self, ticket):
-        ...
+    async def delete(self, ticket_id): ...
 
-    async def delete(self, ticket_id):
-        ...
+    async def assign(self, ticket_id, user_id): ...
 
-    async def assign(self, ticket_id, user_id):
-        ...
-
-    async def close(self, ticket_id):
-        ...
+    async def close(self, ticket_id): ...
 ```
 
 Isso é uma organização interna da aplicação, não uma regra arquitetural
@@ -591,12 +577,10 @@ Exemplo:
 
 ``` python
 class UserReader(Protocol):
-
     async def get_by_id(
         self,
         user_id: UUID,
-    ) -> UserData | None:
-        ...
+    ) -> UserData | None: ...
 ```
 
 O `TicketService` depende de `UserReader`:
@@ -1024,21 +1008,18 @@ A aplicação pode depender de uma abstração:
 
 ``` python
 class FileStorage(Protocol):
-
     async def upload(
         self,
         file: BinaryIO,
         filename: str,
         content_type: str,
-    ) -> str:
-        ...
+    ) -> str: ...
 ```
 
 E a infraestrutura fornece:
 
 ``` python
-class MinioFileStorage:
-    ...
+class MinioFileStorage: ...
 ```
 
 Fluxo:
@@ -1515,8 +1496,7 @@ Conceitualmente:
     autoretry_for=(Exception,),
     retry_backoff=True,
 )
-def notify_ticket_created(self, ticket_id: str):
-    ...
+def notify_ticket_created(self, ticket_id: str): ...
 ```
 
 A task recebe somente aquilo que precisa para processar o trabalho.
@@ -1714,9 +1694,7 @@ async def create_ticket(
     request: CreateTicketRequest,
     use_case: CreateTicket = Depends(...),
 ):
-    return await use_case.execute(
-        CreateTicketCommand(...)
-    )
+    return await use_case.execute(CreateTicketCommand(...))
 ```
 
 O controller não deve conter regra de negócio significativa.
